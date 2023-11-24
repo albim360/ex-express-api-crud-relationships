@@ -10,13 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  posts     Post[]    @relation("CategoryToPost")
+  published Boolean   @default(false)
+}
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  posts     Post[]    @relation("TagToPost")
+  published Boolean   @default(false)
+}
+
 model Post {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(50)
-  slug      String   @unique
-  image     String?  @db.Text
-  content   String   @db.Text
-  published Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  title       String
+  slug        String    @unique
+  image       String?
+  content     String
+  published   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  categoryId  Int?      
+  category    Category? @relation("CategoryToPost", fields: [categoryId], references: [id])
+  tags        Tag[]     @relation("TagToPost")
 }

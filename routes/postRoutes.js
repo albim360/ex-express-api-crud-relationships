@@ -1,12 +1,31 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
 const slugify = require('slugify');
+
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Middleware per la validazione dei dati
+const validatePost = [
+  body('title').notEmpty().withMessage('Il titolo non può essere vuoto'),
+  body('content').notEmpty().withMessage('Il contenuto non può essere vuoto'),
+];
+
+// Middleware di gestione degli errori
+const errorHandler = (err, req, res, next) => {
+  console.error('Errore:', err);
+  res.status(500).json({ error: 'Qualcosa è andato storto' });
+};
+
 // Endpoint per creare un nuovo post
-router.post('/posts', async (req, res) => {
+router.post('/posts', validatePost, async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { title, content } = req.body;
 
     const slug = slugify(title, {
@@ -24,8 +43,7 @@ router.post('/posts', async (req, res) => {
 
     res.json(newPost);
   } catch (error) {
-    console.error("Errore durante la creazione del post:", error);
-    res.status(500).json({ error: "Errore durante la creazione del post" });
+    next(error);
   }
 });
 
@@ -41,13 +59,12 @@ router.get('/posts/:slug', async (req, res) => {
     });
 
     if (!post) {
-      return res.status(404).json({ error: "Post non trovato" });
+      return res.status(404).json({ error: 'Post non trovato' });
     }
 
     res.json(post);
   } catch (error) {
-    console.error("Errore durante la ricerca del post:", error);
-    res.status(500).json({ error: "Errore durante la ricerca del post" });
+    next(error);
   }
 });
 
@@ -76,14 +93,18 @@ router.get('/posts', async (req, res) => {
 
     res.json(posts);
   } catch (error) {
-    console.error("Errore durante il recupero dei post:", error);
-    res.status(500).json({ error: "Errore durante il recupero dei post" });
+    next(error);
   }
 });
 
 // Endpoint per aggiornare un post
-router.put('/posts/:slug', async (req, res) => {
+router.put('/posts/:slug', validatePost, async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { slug } = req.params;
     const { title, content } = req.body;
 
@@ -99,8 +120,7 @@ router.put('/posts/:slug', async (req, res) => {
 
     res.json(updatedPost);
   } catch (error) {
-    console.error("Errore durante l'aggiornamento del post:", error);
-    res.status(500).json({ error: "Errore durante l'aggiornamento del post" });
+    next(error);
   }
 });
 
@@ -117,9 +137,11 @@ router.delete('/posts/:slug', async (req, res) => {
 
     res.json(deletedPost);
   } catch (error) {
-    console.error("Errore durante l'eliminazione del post:", error);
-    res.status(500).json({ error: "Errore durante l'eliminazione del post" });
+    next(error);
   }
 });
+
+// Middleware di gestione degli errori globale
+router.use(errorHandler);
 
 module.exports = router;
